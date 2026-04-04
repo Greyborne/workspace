@@ -9,7 +9,7 @@
 #                   Command to run the sh script using bash.
 #
 #   Command:        sudo bash ./setup.sh
-#                   curl -fsSL  https://raw.githubusercontent.com/Greyborne/workspace/refs/heads/main/setup.sh  | bash
+#                   curl -fsSL  https://raw.githubusercontent.com/Greyborne/workspace/refs/heads/main/setup.sh  | sudo bash
 #
 #   Bonus:          If you want to copy your ssh key over...
 #                   First Create keypair if you haven't already...
@@ -93,7 +93,7 @@ backup_file() {
 check_container_environment() {
     if [[ -f /.dockerenv ]] || grep -q "lxc\|docker" /proc/1/cgroup 2>/dev/null; then
         log "Container environment detected" "WARNING"
-        read -p "Running in a container may affect some features. Continue anyway? (y/n) " continue_container
+        read -p "$(echo -e "Running in a container may affect some features. Continue anyway? (y/n) ")")" continue_container
         if [[ ! $continue_container =~ ^[Yy]$ ]]; then
             log "User chose to exit due to container environment"
             exit 1
@@ -110,7 +110,7 @@ fnRebootCheck(){
             log "Packages requiring reboot: $(tr '\n' ' ' < /var/run/reboot-required.pkgs)"
         fi
 
-        read -p "Do you want to reboot before continuing setup script... (y/n) " start_reboot
+        read -p "$(echo -e "Do you want to reboot before continuing setup script... (y/n) ")" start_reboot
         if [[ $start_reboot =~ ^[Yy]$ ]]; then
             log "User chose to reboot. Rebooting now..."
             echo "CONTINUE_FROM=post_reboot" > /tmp/setup_continue
@@ -135,7 +135,7 @@ fnCheckUbuntuVersion(){
     # Check if it's Ubuntu
     if [[ "$UBUNTU_ID" != "Ubuntu" ]]; then
         log "This script is designed for Ubuntu. Detected: $UBUNTU_ID" "WARNING"
-        read -p "Do you want to continue anyway? (y/n) " continue_anyway
+        read -p "$(echo -e "Do you want to continue anyway? (y/n) ")" continue_anyway
         if [[ ! $continue_anyway =~ ^[Yy]$ ]]; then
             log "User chose to exit due to OS mismatch"
             exit 1
@@ -147,7 +147,7 @@ fnCheckUbuntuVersion(){
     version_num=$(echo "$UBUNTU_VERSION" | cut -d. -f1)
     if [[ $version_num -lt 20 ]]; then
         log "Ubuntu version $UBUNTU_VERSION may not be fully supported (minimum recommended: 20.04)" "WARNING"
-        read -p "Do you want to continue anyway? (y/n) " continue_anyway
+        read -p "$(echo -e "Do you want to continue anyway? (y/n) ")" continue_anyway
         if [[ ! $continue_anyway =~ ^[Yy]$ ]]; then
             log "User chose to exit due to version compatibility"
             exit 1
@@ -224,7 +224,7 @@ configure_unattended_upgrades() {
         return 0
     fi
 
-    read -p "Do you want to enable automatic security updates? (Y/n) " auto_updates
+    read -p "$(echo -e "Do you want to enable automatic security updates? (y/n) ")" auto_updates
     if [[ $auto_updates =~ ^[Nn]$ ]]; then
         log "User chose not to enable automatic security updates"
         set_state "$section" "skipped"
@@ -279,7 +279,7 @@ configure_ssh_security() {
         return 0
     fi
 
-    read -p "Do you want to harden SSH configuration? (y/n) " harden_ssh
+    read -p "$(echo -e "Do you want to harden SSH configuration? (y/n) ")" harden_ssh
     if [[ ! $harden_ssh =~ ^[Yy]$ ]]; then
         log "User skipped SSH hardening"
         set_state "$section" "skipped"
@@ -331,7 +331,7 @@ configure_firewall() {
         return 0
     fi
 
-    read -p "Do you want to configure UFW firewall? (y/n) " config_firewall
+    read -p "$(echo -e "Do you want to configure UFW firewall? (y/n) ")" config_firewall
     if [[ ! $config_firewall =~ ^[Yy]$ ]]; then
         log "User skipped firewall configuration"
         set_state "$section" "skipped"
@@ -349,10 +349,10 @@ configure_firewall() {
     ufw default allow outgoing
     ufw allow ssh
 
-    read -p "Do you want to allow HTTP (port 80)? (y/n) " allow_http
+    read -p "$(echo -e "Do you want to allow HTTP (port 80)? (y/n) ")" allow_http
     [[ $allow_http =~ ^[Yy]$ ]] && ufw allow 80
 
-    read -p "Do you want to allow HTTPS (port 443)? (y/n) " allow_https
+    read -p "$(echo -e "Do you want to allow HTTPS (port 443)? (y/n) ")" allow_https
     [[ $allow_https =~ ^[Yy]$ ]] && ufw allow 443
 
     ufw --force enable
@@ -372,7 +372,7 @@ optimize_system_performance() {
         return 0
     fi
 
-    read -p "Do you want to apply basic system performance optimizations? (y/n) " optimize_perf
+    read -p "$(echo -e "Do you want to apply basic system performance optimizations? (y/n) ")" optimize_perf
     if [[ ! $optimize_perf =~ ^[Yy]$ ]]; then
         log "User skipped performance optimizations"
         set_state "$section" "skipped"
@@ -440,15 +440,15 @@ fnCheckUbuntuVersion
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-    read -p "${RED}$0 is not running as root. Do you want to continue as ROOT?${NC}... (Y/n) " switch_to_root
+    read -p "$(echo -e "${RED}$0 is not running as root. Do you want to continue as ROOT?${NC} (y/n) ")")" switch_to_root
     if [[ $switch_to_root =~ ^[Nn]$ ]]; then
-        log "Switching to root."
-        echo "${BLUE}Re-running with sudo...${NC}"
-        exec sudo "$0" "$@"
-    else
         log "Exiting script due to not running as root."
-        echo -e "${RED}$0 decided to not run as root.  Exiting script.${NC}"
+        echo -e "${RED}$0 decided to not run as root. Exiting script.${NC}"
         exit 2
+    else
+        log "Switching to root."
+        echo -e "${BLUE}Re-running with sudo...${NC}"
+        exec sudo "$0" "$@"
     fi
 fi
 
@@ -477,7 +477,7 @@ nala_state="$(get_state "$install_nala_section")"
 if [[ "$nala_state" == "success" ]]; then
     log "Skipping Nala installation; already completed successfully" "INFO"
 else
-    read -p "Do you want to install Nala? This is an alternative to apt with better visual package install experience... (Y/n) " install_nala
+    read -p "$(echo -e "Do you want to install Nala? This is an alternative to apt with better visual package install experience... (y/n) ")" install_nala
     if [[ $install_nala =~ ^[Nn]$ ]]; then
         log "User skipped Nala installation"
         set_state "$install_nala_section" "skipped"
@@ -546,7 +546,7 @@ bashrc_state="$(get_state "$bashrc_section")"
 if [[ "$bashrc_state" == "success" ]]; then
     log "Skipping login display configuration; already completed successfully" "INFO"
 else
-    read -p "Do you want to update the login configuration to include system information? (y/n) " config_bashrc
+    read -p "$(echo -e "Do you want to update the login configuration to include system information? (y/n) ")" config_bashrc
     if [[ $config_bashrc =~ ^[Yy]$ ]]; then
         backup_file "/etc/bash.bashrc"
 
@@ -639,7 +639,7 @@ guestagent_state="$(get_state "$guestagent_section")"
 if [[ "$guestagent_state" == "success" ]]; then
     log "Skipping Proxmox guest agent; already installed" "INFO"
 else
-    read -p "Is this server running on ProxMox? If so, install and configure the Proxmox Guest Agent service. (y/n) " install_guestagent
+    read -p "$(echo -e "Is this server running on ProxMox? If so, install and configure the Proxmox Guest Agent service. (y/n) ")" install_guestagent
     if [[ $install_guestagent =~ ^[Yy]$ ]]; then
         log "Installing and configuring Proxmox Guest Agent"
         if $pacman install qemu-guest-agent -y; then
@@ -664,7 +664,7 @@ fail2ban_state="$(get_state "$fail2ban_section")"
 if [[ "$fail2ban_state" == "success" ]]; then
     log "Skipping Fail2ban; already installed and configured" "INFO"
 else
-    read -p "Do you want to install Fail2ban? This is a daemon that will ban IP addresses with continuous failed logins... (y/n) " install_fail2ban
+    read -p "$(echo -e "Do you want to install Fail2ban? This is a daemon that will ban IP addresses with continuous failed logins... (y/n) ")" install_fail2ban
     if [[ $install_fail2ban =~ ^[Yy]$ ]]; then
         log "Installing Fail2ban"
         if $pacman install fail2ban -y; then
@@ -730,11 +730,11 @@ docker_state="$(get_state "$docker_section")"
 if [[ "$docker_state" == "success" ]]; then
     log "Skipping Docker installation; already completed successfully" "INFO"
 else
-    read -p "Do you want to install Docker? (y/n) " install_docker
+    read -p "$(echo -e "Do you want to install Docker? (y/n) ")" install_docker
     if [[ $install_docker =~ ^[Yy]$ ]]; then
         log "Starting Docker installation process"
 
-        read -p "Do you want to uninstall unofficial Docker packages? (y/n) " uninstall_unof
+        read -p "$(echo -e "Do you want to uninstall unofficial Docker packages? (y/n) ")" uninstall_unof
         if [[ $uninstall_unof =~ ^[Yy]$ ]]; then
             log "Removing unofficial Docker packages"
             for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
@@ -743,7 +743,7 @@ else
             log "Unofficial Docker packages removal completed"
         fi
 
-        read -p "Would you like to set up Docker's official apt repository? (y/n) " setup_rep
+        read -p "$(echo -e "Would you like to set up Docker's official apt repository? (y/n) ")" setup_rep
         if [[ $setup_rep =~ ^[Yy]$ ]]; then
             log "Setting up Docker's official repository"
 
@@ -800,7 +800,7 @@ $local_docker_codename stable" | tee /etc/apt/sources.list.d/docker.list > /dev/
             set_state "$docker_section" "failure"
         fi
 
-        read -p "Do you want to test Docker by running hello-world? (y/n) " install_hello
+        read -p "$(echo -e "Do you want to test Docker by running hello-world? (y/n) ")" install_hello
         if [[ $install_hello =~ ^[Yy]$ ]]; then
             log "Testing Docker installation"
             if timeout 30 docker run --rm hello-world; then
@@ -815,7 +815,7 @@ $local_docker_codename stable" | tee /etc/apt/sources.list.d/docker.list > /dev/
         if [[ "$portainer_state" == "success" ]]; then
             log "Skipping Portainer installation; already completed successfully" "INFO"
         else
-            read -p "Do you want to install Portainer for Docker management? (y/n) " install_portainer
+            read -p "$(echo -e "Do you want to install Portainer for Docker management? (y/n) ")" install_portainer
             if [[ $install_portainer =~ ^[Yy]$ ]]; then
                 log "Installing Portainer"
                 if docker volume create portainer_data; then
@@ -854,7 +854,7 @@ aliases_state="$(get_state "$aliases_section")"
 if [[ "$aliases_state" == "success" ]]; then
     log "Skipping system aliases; already configured" "INFO"
 else
-    read -p "Do you want to configure useful system aliases? (y/n) " config_aliases
+    read -p "$(echo -e "Do you want to configure useful system aliases? (y/n) ")" config_aliases
     if [[ $config_aliases =~ ^[Yy]$ ]]; then
         log "Configuring system aliases"
 
@@ -1031,7 +1031,7 @@ webmin_state="$(get_state "$webmin_section")"
 if [[ "$webmin_state" == "success" ]]; then
     log "Skipping Webmin installation; already completed successfully" "INFO"
 else
-    read -p "Do you want to install Webmin? This will allow you to administer your Linux server via a web interface... (y/n) " install_webmin
+    read -p "$(echo -e "Do you want to install Webmin? This will allow you to administer your Linux server via a web interface... (y/n) ")" install_webmin
     if [[ $install_webmin =~ ^[Yy]$ ]]; then
         log "Installing Webmin"
 
@@ -1087,7 +1087,7 @@ configure_ddns() {
         return 0
     fi
 
-    read -p "Do you want to configure Dynamic DNS registration with your Technitium DNS server (chazwall.lan)? (y/n) " config_ddns
+    read -p "$(echo -e "Do you want to configure Dynamic DNS registration with your Technitium DNS server (chazwall.lan)? (y/n) ")" config_ddns
     if [[ ! $config_ddns =~ ^[Yy]$ ]]; then
         log "User skipped DDNS configuration"
         set_state "$section" "skipped"
@@ -1095,7 +1095,7 @@ configure_ddns() {
     fi
 
     # Prompt for Technitium server IP
-    read -p "Enter the IP address of your Technitium DNS server: " TECHNITIUM_IP
+    read -p "$(echo -e "Enter the IP address of your Technitium DNS server: " TECHNITIUM_IP
     if [[ -z "$TECHNITIUM_IP" ]]; then
         log "No DNS server IP provided, skipping DDNS configuration" "WARNING"
         set_state "$section" "skipped"
