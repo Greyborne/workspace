@@ -54,6 +54,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Reconnect stdin to terminal (required when running via curl | bash)
+[ -t 0 ] || exec < /dev/tty
+
 # Logging function with color support
 log() {
     local level="${2:-INFO}"
@@ -93,7 +96,7 @@ backup_file() {
 check_container_environment() {
     if [[ -f /.dockerenv ]] || grep -q "lxc\|docker" /proc/1/cgroup 2>/dev/null; then
         log "Container environment detected" "WARNING"
-        read -p "$(echo -e "Running in a container may affect some features. Continue anyway? (y/n) ")")" continue_container
+        read -p "$(echo -e "Running in a container may affect some features. Continue anyway? (y/n) ")" continue_container
         if [[ ! $continue_container =~ ^[Yy]$ ]]; then
             log "User chose to exit due to container environment"
             exit 1
@@ -440,7 +443,7 @@ fnCheckUbuntuVersion
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-    read -p "$(echo -e "${RED}$0 is not running as root. Do you want to continue as ROOT?${NC} (y/n) ")")" switch_to_root
+    read -p "$(echo -e "${RED}$0 is not running as root. Do you want to continue as ROOT?${NC} (y/n) ")" switch_to_root
     if [[ $switch_to_root =~ ^[Nn]$ ]]; then
         log "Exiting script due to not running as root."
         echo -e "${RED}$0 decided to not run as root. Exiting script.${NC}"
