@@ -9,7 +9,7 @@
 #                   Command to run the sh script using bash.
 #
 #   Command:        sudo bash ./setup.sh
-#                   curl -fsSL    | bash
+#                   curl -fsSL  https://raw.githubusercontent.com/Greyborne/workspace/refs/heads/main/setup.sh  | bash
 #
 #   Bonus:          If you want to copy your ssh key over...
 #                   First Create keypair if you haven't already...
@@ -440,8 +440,16 @@ fnCheckUbuntuVersion
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-    echo -e "${RED}$0 is not running as root. Try using sudo.${NC}"
-    exit 2
+    read -p "${RED}$0 is not running as root. Do you want to continue as ROOT?${NC}... (Y/n) " switch_to_root
+    if [[ $switch_to_root =~ ^[Nn]$ ]]; then
+        log "Switching to root."
+        echo "${BLUE}Re-running with sudo...${NC}"
+        exec sudo "$0" "$@"
+    else
+        log "Exiting script due to not running as root."
+        echo -e "${RED}$0 decided to not run as root.  Exiting script.${NC}"
+        exit 2
+    fi
 fi
 
 log "Starting Ubuntu server setup script"
