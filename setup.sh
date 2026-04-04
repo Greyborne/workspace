@@ -1098,7 +1098,17 @@ configure_ddns() {
     fi
 
     # Prompt for Technitium server IP
-    read -p "$(echo -e "Enter the IP address of your Technitium DNS server: " TECHNITIUM_IP
+    # Detect current DNS server as default suggestion
+    DETECTED_DNS=$(resolvectl status 2>/dev/null | grep -m1 "DNS Servers" | awk '{print $NF}')
+    if [[ -z "$DETECTED_DNS" ]]; then
+        DETECTED_DNS=$(grep -m1 "^nameserver" /etc/resolv.conf 2>/dev/null | awk '{print $2}')
+    fi
+
+    read -p "$(echo -e "Enter the IP address of your Technitium DNS server [${DETECTED_DNS:-none detected}]: ")" TECHNITIUM_IP
+    # Use detected DNS if user just hit Enter
+    if [[ -z "$TECHNITIUM_IP" ]]; then
+        TECHNITIUM_IP="$DETECTED_DNS"
+    fi
     if [[ -z "$TECHNITIUM_IP" ]]; then
         log "No DNS server IP provided, skipping DDNS configuration" "WARNING"
         set_state "$section" "skipped"
